@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <!-- set styles on the top -->
+    <style>
+        .chart-container {
+            max-width: 1050px;
+            /* border: 2px solid red; */
+            margin: 0 auto;
+            /* auto centers the div */
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+            position:relative;
+        }
+
+        svg {
+            /* border: 2px solid purple; */
+            overflow: visible;
+        }
+
+        h1 {
+            margin: 0 auto;
+        }
+
+        .x .tick line {
+            stroke: rgba(0, 0, 0, .2);
+        }
+
+        .y .tick line {
+            stroke: rgba(0, 0, 0, .2);
+        }
+
+        .x .domain {
+            display: none;
+        }
+
+        .y .domain {
+            display: none;
+        }
+
+        .y .tick text {
+            font-size: 14px;
+            fill: #333;
+
+        }
+
+        .x .tick text {
+            font-size: 14px;
+            fill: #333;
+        }
+
+        .label {
+            font-size: 20px;
+            font-weight: 200;
+        }
+
+        .legend {
+            font-size: 13px;
+            font-weight: 200;
+            fill: #959595;
+        }
+
+        .axis-label {
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .source {
+            position:absolute;
+            font-size: 14px;
+            color: "green";
+
+        }
+
+        mark.black {
+            color:#ff0000;
+            font-weight:bold;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="chart-container">
+        <h1 class="headline">
+            2009
+        </h1>
+
+        <svg width="1050px" height="575px">
+      
+        </svg>
+
+
+
+    </div>
+</body>
+
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<!-- we're using d3 version 6 (the latest version) for all out work -->
+
+<script>   
+    
+    
+    
+    
+    console.log({ d3 })
+
+    let width = 900;
+    let height = 500;
+
+    let svg = d3.select("body")
+        .select("svg")
+
+    let divLabel = d3.select(".chart-container").append("div")
+        .attr("class", "source")
+        .html("Note: The income measure used here is <b> <t style='color:black;'> disposable income</b></t style>, which is defined as market income plus cash transfers from the government and noncash benefits like food stamps and public housing. It excludes taxes, out-of-pocket medical spending, insurance premiums and other expenses. There have been small changes in the census questionnaire between the two survey dates. Source: Current Population Survey, analysis by Matt Bruenig")
+        .style("left", "170px")
+        .style("right", "320px")
+        .style("top", "585px")
+        .style("color", "#ABABAB")
+
+
+    d3.csv("healthcare-disposable-inc.csv").then(function (data) {
+
+        data.forEach(function (row) {
+                row.Percentile = Number(row.Percentile)
+                row.CHIP = Number(row.CHIP)
+                row['Direct Purchase'] = Number(row['Direct Purchase'])
+                row.Employer = Number(row.Employer)
+                row.Medicare = Number(row.Medicare)
+                row.Medicaid = Number(row.Medicaid)
+                row['Medicare+Medicaid'] = Number(row['Medicare+Medicaid'])
+                row.Military = Number(row.Military)
+                row.Other = Number(row.Other)
+                row["Subsidized Exchange"] = Number(row["Subsidized Exchange"])
+                row["Uninsured"] = Number(row["Uninsured"])
+
+            })
+
+        console.log({data})
+
+        let margin = { top: 5, right: 10, bottom: 5, left: 0 };
+
+        let sel_cols = [
+            "Medicaid",
+            "Medicare",
+            "Medicare+Medicaid",
+            "Employer",
+            "Uninsured",
+            "Direct Purchase",
+            "Subsidized Exchange",
+            "CHIP",
+            "Military",
+            "Other"]
+
+        let sel_colors = [
+            "#f44336", // "Medicaid",
+            "#FF9800", // "Medicare",
+            "#FDD835", // "Medicare+Medicaid",
+            "#FFF8E1", // "Employer",
+            "#26A69A", // "Uninsured",
+            "#4DD0E1", // "Direct Purchase",
+            "#F06292", // "Subsidized Exchange",
+            "#5C6BC0", // "CHIP",
+            "#90A4AE", // "Military",
+            "#E0E0E0"  // "Other"
+        ]
+        
+        let year_state = 2009;
+        let d_2020 = data.filter(d => d.year == 2020)
+        let d_2009 = data.filter(d => d.year == 2009)
+        console.log({d_2009})
+
+        let series_2020 = d3.stack().keys(sel_cols)(d_2020);
+        let series_2009 = d3.stack().keys(sel_cols)(d_2009);
+
+        let series_2020_group = d3.group(series_2020)
+        
+        console.log({series_2020})
+        console.log({series_2020_group})
+
+        let color = d3.scaleOrdinal() //takes domain and outputs a different range
+            .domain(sel_cols)    //good for renaming something or casting it in a different way
+            .range(sel_colors)
+
+        let x = d3.scaleLinear()
+            .domain([0, 100])
+            .range([margin.left, width])
+
+        let y = d3.scaleLinear()
+            .domain([0, 1])
+            .range([height - margin.bottom, margin.top])
+
+
+        let xAxisSettings = d3.axisBottom(x)
+            .tickSize(5)
+            .tickPadding(6)
+            .tickValues([5, 10, 20, 30, 40, 50, 60, 70, 80, 80, 90, 95]) //define values of tics
+            .tickFormat(d3.format(".0f"))
+
+        let xAxis = svg.append("g")
+            .attr("class", "x axis")
+            .call(xAxisSettings)
+            .call(g =>g.selectAll(".domain").remove())
+            .attr("transform", `translate(0, ${height - margin.bottom})`)
+
+
+        let yAxisSettings = d3.axisLeft(y)
+            .tickValues([.2, .4, .6, .8])
+            .tickSize(6)
+            .tickPadding(4)
+            .tickFormat(d3.format(".0%"))
+
+        let yAxis = svg
+            .append("g")
+            .attr("class", "y axis")
+            .call(yAxisSettings)
+            .call(g => g.selectAll(".domain").remove())
+        
+        
+
+        let area = d3.area()
+            .x(d => x(d.data.Percentile))
+            .y0(d => y(d[0]))
+            .y1(d => y(d[1]))
+
+        let hed = d3.select(".headline")
+
+        let areas = svg.append("g")
+                        .attr("class", "area") 
+            .selectAll("path")
+            .data(series_2009, d =>d.group)
+            .join("path")
+            .attr("class", d => {
+                console.log({d})
+                return d.key
+            })
+            .attr("fill", d=> color(d.key))
+            .attr("d", area)
+
+
+
+        y_rects2 = 1.039
+        y_rects1 = 1.01
+        var rect_data = [[[x(55.5), y(y_rects2)],[x(57),y(y_rects1)], "#FDD835"], 
+                         [[x(70), y(y_rects2)],[x(71.5),y(y_rects1)], "#F06292"], 
+                         [[x(83.5), y(y_rects2)],[x(85),y(y_rects1)], "#5C6BC0"], 
+                         [[x(88.5), y(y_rects2)],[x(90),y(y_rects1)], "#90A4AE"],
+                         [[x(94.5), y(y_rects2)],[x(96),y(y_rects1)],  "#E0E0E0"]
+                         ]
+        var rects = svg.selectAll("whatever")
+                        .data(rect_data)
+                        .enter()
+                        .append("rect")
+                        .attr("x", d=>d[0][0])
+                        .attr("y", d=> d[0][1])
+                        .attr("width", d=> d[1][0] - d[0][0])
+                        .attr("height", d=> d[1][1] - d[0][1])
+                        .attr("fill", d => d[2])
+
+
+        svg.append("text")
+            .attr("class", "legend")
+            .attr("x",x(57.25))
+            .attr("y", y(1.015))
+            .text("Medicare and Medicaid")
+
+        svg.append("text")
+            .attr("class", "legend")
+            .attr("x", x(71.75))
+            .attr("y", y(1.015))
+            .text("Subsidized Exchange")
+        
+        svg.append("text")
+            .attr("class", "legend")
+            .attr("x", x(85.25))
+            .attr("y", y(1.015))
+            .text("CHIP")
+        
+        svg.append("text")
+            .attr("class", "legend")
+            .attr("x", x(90.25))
+            .attr("y", y(1.015))
+            .text("Military")
+        
+        svg.append("text")
+            .attr("class", "legend")
+            .attr("x", x(96.5))
+            .attr("y", y(1.015))
+            .text("Other")
+
+        svg.append("text")
+            .attr("class", "axis-label")
+            .attr("x", x(44))
+            .attr("y", y(-.08))
+            .text("INCOME PERCENTILE")
+        
+
+        
+        let dur = 1500
+        let es = d3.easeCubicOut
+        
+        let care_x_20 = x(8)
+        let care_y_20 = y(.435)
+        let care_x_9 = x(10) 
+        let care_y_9 = y(.330)
+
+        let un_x_20 = x(22)
+        let un_y_20 = y(.82)
+        let un_x_9 = x(10)
+        let un_y_9 = y(.73)
+        
+        let emp_x_20 = x(77)
+        let emp_x_9 = x(80) 
+        let emp_y_20 = y(.50)
+        let emp_y_9 = y(.450)
+
+        let caid_x_20 = x(7)
+        let caid_x_9 = x(12)
+        let caid_y_20 = 415
+        let caid_y_9 = 435
+
+        let dp_x = x(100.5)
+        let dp_y_9 = y(.9325)
+        let dp_y_20 = y(.925)
+
+
+
+        function update() {
+            console.log("update")
+            console.log("old year state:" + year_state);
+
+            if (year_state == 2009) {
+                year_state = 2020
+                dance(series_2020)
+                hed.html("2020")
+
+                d3
+                    .selectAll("#Employer")
+                    .transition()
+                    .attr("x", emp_x_20)
+                    .attr("y", emp_y_20)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+                
+                d3
+                    .selectAll("#Medicaid")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", caid_x_20)
+                    .attr("y", caid_y_20)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+
+                d3
+                    .selectAll("#Medicare")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", care_x_20)
+                    .attr("y", care_y_20)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+
+                d3
+                    .selectAll("#Uninsured")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", un_x_20)
+                    .attr("y", un_y_20)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+                
+                d3 
+                    .selectAll("#DP")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", dp_x)
+                    .attr("y", dp_y_20)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+
+
+            } else {
+                year_state = 2009 
+                dance(series_2009)
+                hed.html("2009")
+
+                d3
+                    .selectAll("#Employer")
+                    .transition()
+                    .attr("x", emp_x_9)
+                    .attr("y", emp_y_9)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+                
+                d3
+                    .selectAll("#Medicaid")
+                    .transition()
+                    .attr("x", caid_x_9)
+                    .attr("y", caid_y_9)
+                    .duration(dur)
+                    .ease(d3.easeCubicOut)
+                
+                d3
+                    .selectAll("#Medicare")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", care_x_9)
+                    .attr("y", care_y_9)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+                
+                d3
+                    .selectAll("#Uninsured")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", un_x_9)
+                    .attr("y", un_y_9)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+                
+                d3 
+                    .selectAll("#DP")
+                    .transition()
+                    .duration(dur)
+                    .attr("x", dp_x)
+                    .attr("y", dp_y_9)
+                    .duration(1500)
+                    .ease(d3.easeCubicOut)
+
+            }
+        } 
+        console.log("New Year state " + year_state)
+
+        function dance(filtered_data) {
+            d3
+                .selectAll("path")
+                .data(filtered_data)
+                .transition()
+                .attr("d", area)
+                .duration(1500)
+                .ease(d3.easeCubicOut)
+
+
+
+
+        }
+        areas.on("clock", () => {
+            timer.stop();
+        })
+        var timer = d3.interval(update, 3000) //5000
+        
+
+        svg.append("text")
+            .attr("class", "label")
+            .attr("id", "Employer")
+            .attr("x", emp_x_9)
+            .attr("y", emp_y_9)
+            .text("Employer")
+        
+        svg.append("text")
+            .attr("class", "label")
+            .attr("id", "Medicaid")
+            .attr("x", caid_x_9)
+            .attr("y", caid_y_9)
+            .text("Medicaid")
+            .style("fill", "white")
+
+        svg.append("text")
+            .attr("class", "label")
+            .attr("id", "Medicare")
+            .attr("x", care_x_9)
+            .attr("y", care_y_9)
+            .text("Medicare")
+            .style("fill", "#514644")
+
+        svg.append("text")
+            .attr("class", "label")
+            .attr("id", "Uninsured")
+            .attr("x", un_x_9)
+            .attr("y", un_y_9)
+            .text("Uninsured")
+            .style("fill", "white")
+
+        
+        svg.append("text")
+            .attr("class", "label")
+            .attr("id", "DP")
+            .attr("x", dp_x)
+            .attr("y", dp_y_9)
+            .text("Direct Purchase")
+            .style("fill", "#656565")
+            .style("font-size", "14px")
+
+
+    
+        
+
+
+    })
+
+</script>
